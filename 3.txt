@@ -1,0 +1,106 @@
+from datetime import datetime, timedelta
+
+# Попытка подключить colorama для цветного вывода
+try:
+    from colorama import init, Fore, Style
+    init()
+except ImportError:
+    class Fore:
+        RED = ''
+        GREEN = ''
+        CYAN = ''
+        YELLOW = ''
+        RESET = ''
+    class Style:
+        BRIGHT = ''
+        RESET_ALL = ''
+
+# Класс сотрудника
+class Employee:
+    def __init__(self, name, start_time, end_time, hourly_rate):
+        self.name = name
+        self.start_time = start_time
+        self.end_time = end_time
+        self.hours_worked = self.calculate_work_hours()
+        self.salary = self.hours_worked * hourly_rate
+
+    def calculate_work_hours(self):
+        """Вычисление отработанных часов, включая ночную смену"""
+        time_format = "%H:%M"
+        start = datetime.strptime(self.start_time, time_format)
+        end = datetime.strptime(self.end_time, time_format)
+        if end < start:
+            end += timedelta(days=1)  # Ночная смена (через полночь)
+        duration = (end - start).total_seconds() / 3600
+        return duration
+
+    def __repr__(self):
+        return f"{self.name}: {self.hours_worked:.2f} ч, {self.salary:.2f} руб."
+
+def get_valid_time(prompt):
+    """Получение времени с проверкой формата"""
+    while True:
+        time_str = input(prompt).strip()
+        try:
+            datetime.strptime(time_str, "%H:%M")
+            return time_str
+        except ValueError:
+            print(Fore.RED + "❗️ Неверный формат времени. Используйте HH:MM." + Fore.RESET)
+
+def main():
+    hourly_rate = 500
+    employees = []
+
+    print(Fore.CYAN + Style.BRIGHT + "🕒 Учёт рабочего времени сотрудников" + Style.RESET_ALL)
+
+    # Ввод данных
+    while True:
+        name = input("\nВведите имя сотрудника (или пусто для завершения): ").strip()
+        if not name:
+            break
+        start_time = get_valid_time(f"Время прихода для {name} (HH:MM): ")
+        end_time = get_valid_time(f"Время ухода для {name} (HH:MM): ")
+
+        emp = Employee(name, start_time, end_time, hourly_rate)
+        employees.append(emp)
+        print(Fore.GREEN + f"✅ Добавлен {name}, отработал {emp.hours_worked:.2f} ч, заработал {emp.salary:.2f} руб." + Fore.RESET)
+
+    # Сортировка по отработанным часам
+    employees.sort(key=lambda e: e.hours_worked, reverse=True)
+
+    # Вывод отчёта
+    print("\n" + Fore.YELLOW + "📄 Отчёт по рабочему времени" + Fore.RESET)
+    print("-" * 45)
+    total_salary = 0
+    total_hours = 0
+    overtime_employees = 0
+
+    for emp in employees:
+        print(f"{emp.name:<20} | Часов: {emp.hours_worked:>5.2f} | Зарплата: {emp.salary:>8.2f} руб.")
+        total_salary += emp.salary
+        total_hours += emp.hours_worked
+        if emp.hours_worked > 8:
+            overtime_employees += 1
+
+    average_hours = total_hours / len(employees) if employees else 0
+
+    print("-" * 45)
+    print(f"{'Общая ЗП:':<20} {total_salary:>21.2f} руб.")
+    print(f"{'Среднее время:':<20} {average_hours:>21.2f} ч")
+    print(f"{'С переработкой (>8ч):':<20} {overtime_employees:>21}")
+
+    # Сохранение в файл
+    with open("work_time_report.txt", "w", encoding="utf-8") as f:
+        f.write("🕒 Отчёт о рабочем времени:\n")
+        f.write("-" * 45 + "\n")
+        for emp in employees:
+            f.write(f"{emp.name:<20} | Часов: {emp.hours_worked:>5.2f} | Зарплата: {emp.salary:>8.2f} руб.\n")
+        f.write("-" * 45 + "\n")
+        f.write(f"Общая ЗП: {total_salary:.2f} руб.\n")
+        f.write(f"Среднее время: {average_hours:.2f} ч\n")
+        f.write(f"Сотрудников с переработкой: {overtime_employees}\n")
+
+    print(Fore.CYAN + "\n📁 Отчёт сохранён в 'work_time_report.txt'" + Fore.RESET)
+
+if __name__ == "__main__":
+    main()
